@@ -146,6 +146,17 @@
             window.location.href = "intent:#Intent;action=android.intent.action.MAIN;category=android.intent.category.LAUNCHER;package=com.yourpackage.lwfly;end";
         }
 
+        async function loadModel(modelURL) {
+            try {
+                const model = await tmImage.load(modelURL);
+                return model;
+            } catch (error) {
+                console.error("Error loading model:", error);
+                alert("Failed to load model. Check console for details.");
+                throw error; // re-throw to be caught in the calling function
+            }
+        }
+
         async function classifyImage() {
             const input = document.createElement('input');
             input.type = 'file';
@@ -161,14 +172,14 @@
                     document.getElementById("main").appendChild(resultsDiv);
 
                     try {
-                        // Load the model for ripeness
+                        // Load the ripeness model
                         const ripenessModelURL = 'https://teachablemachine.withgoogle.com/models/bo4w33h6o/model.json';
-                        const ripenessModel = await tmImage.load(ripenessModelURL);
+                        const ripenessModel = await loadModel(ripenessModelURL);
                         const ripenessPrediction = await ripenessModel.predict(image);
 
-                        // Load the model for field status
+                        // Load the field status model
                         const statusModelURL = 'https://teachablemachine.withgoogle.com/models/3R2HPGq8E/model.json';
-                        const statusModel = await tmImage.load(statusModelURL);
+                        const statusModel = await loadModel(statusModelURL);
                         const statusPrediction = await statusModel.predict(image);
 
                         // Display the predictions
@@ -184,8 +195,8 @@
 
                         resultsDiv.innerHTML += ripenessResults + statusResults;
                     } catch (error) {
-                        console.error("Model loading or prediction failed:", error);
-                        resultsDiv.innerHTML += `<p>Failed to load or predict using the model. Please try again later.</p>`;
+                        console.error("Error during prediction:", error);
+                        resultsDiv.innerHTML += "<p>Error in prediction. Check console for details.</p>";
                     }
                 }
             };
