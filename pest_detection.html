@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pagtuklas ng Peste</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: #f4f4f4;
+        }
+        .header {
+            text-align: center;
+            padding: 20px;
+            background-color: #4CAF50;
+            color: white;
+        }
+        .button-container {
+            text-align: center;
+            margin: 20px;
+        }
+        .button-container button {
+            padding: 10px 20px;
+            font-size: 1.2em;
+            cursor: pointer;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            transition: background-color 0.3s ease;
+        }
+        .button-container button:hover {
+            background-color: #45a049;
+        }
+        .results {
+            margin: 20px;
+            text-align: center;
+        }
+        .results img {
+            max-width: 100%;
+            border-radius: 10px;
+        }
+        .results p {
+            font-size: 1.2em;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Pagtuklas ng Peste</h1>
+    </div>
+    <div class="button-container">
+        <button id="take-photo-btn">Kumuha ng Larawan</button>
+    </div>
+    <div id="results" class="results"></div>
+
+    <!-- Load TensorFlow.js and Teachable Machine Library -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-database.js"></script>
+
+    <!-- Your Firebase configuration -->
+    <script>
+        // Add your Firebase project configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyD4kYnLgUzzIZt1XUWL9DEQ5j-YhbE1C_0",
+            authDomain: "farm-monitoring-7d029.firebaseapp.com",
+            databaseURL: "https://farm-monitoring-7d029-default-rtdb.firebaseio.com",
+            projectId: "farm-monitoring-7d029",
+            storageBucket: "farm-monitoring-7d029.appspot.com",
+            messagingSenderId: "205970011096",
+            appId: "1:205970011096:web:5a0718eb27438d499af8ad"
+        };
+        firebase.initializeApp(firebaseConfig);
+    </script>
+
+    <script type="text/javascript">
+        const URL = "https://teachablemachine.withgoogle.com/models/tSq4W7raq/";
+
+        let model, webcam, labelContainer, maxPredictions;
+
+        document.getElementById('take-photo-btn').addEventListener('click', async () => {
+            const video = document.createElement('video');
+            document.body.appendChild(video);
+
+            const constraints = {
+                video: {
+                    facingMode: 'environment', // Use the back camera
+                    width: { ideal: 1280 },
+                    height: { ideal: 720 }
+                }
+            };
+
+            const stream = await navigator.mediaDevices.getUserMedia(constraints);
+            video.srcObject = stream;
+            video.play();
+
+            // Set up the camera and model
+            await init();
+
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(video, 0, 0);
+
+            // Stop the video stream
+            stream.getTracks().forEach(track => track.stop());
+
+            // Classify the captured image
+            const predictions = await model.predict(canvas);
+
+            const resultDiv = document.getElementById('results');
+            resultDiv.innerHTML = '';
+
+            let highestPrediction = predictions.reduce((prev, current) =>
+                (prev.probability > current.probability) ? prev : current);
+
+            const confidence = highestPrediction.probability.toFixed(2) * 100;
+
+            if (confidence >= 95) {
+                resultDiv.innerHTML += `<img src="${canvas.toDataURL()}" alt="Captured Image"><h2>Prediksyon: ${highestPrediction.className} (${confidence}%)</h2>`;
+                checkInDatabase(highestPrediction.className);
+            } else {
+                resultDiv.innerHTML += `<p>Wala pa sa Database</p>`;
+            }
+        });
+
+        async function init() {
+            const modelURL = URL + "model.json";
+            const metadataURL = URL + "metadata.json";
+            model = await tmImage.load(modelURL, metadataURL);
+            maxPredictions = model.getTotalClasses();
+        }
+
+        async function checkInDatabase(diseaseName) {
+            const dbRef = firebase.database().ref('diseases/' + diseaseName);
+            dbRef.once('value', (snapshot) => {
+                if (snapshot.exists()) {
+                    const remedies = snapshot.val().remedies;
+                    document.getElementById('results').innerHTML += `<p>Remedies: ${remedies}</p>`;
+                } else {
+                    document.getElementById('results').innerHTML += `<p>Not found in the database!</p>`;
+                }
+            });
+        }
+    </script>
+</body>
+</html>
+
