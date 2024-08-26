@@ -109,9 +109,9 @@
         }
     </style>
     <!-- Load TensorFlow.js -->
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@3.20.0/dist/tf.min.js"></script>
     <!-- Load Teachable Machine Library -->
-    <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@0.8/dist/teachablemachine-image.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
 </head>
 <body>
 
@@ -150,7 +150,8 @@
                     <button onclick="openLwFly()">Drone Vision</button>
                     <button onclick="classifyImage()">I-classify ang Imahe</button>
                 </div>
-            `;
+                <div id="webcam-container"></div>
+                <div id="label-container"></div>`;
             document.getElementById("main").innerHTML = statusPageHtml;
             closeNav();
         }
@@ -169,36 +170,63 @@
                 if (file) {
                     const image = document.createElement('img');
                     image.src = URL.createObjectURL(file);
-                    const resultsDiv = document.createElement('div');
-                    resultsDiv.className = 'prediction-results';
-                    resultsDiv.innerHTML = `<img src="${image.src}" alt="Uploaded Image"><h2>Mga Prediksyon</h2>`;
-                    document.getElementById("main").appendChild(resultsDiv);
+                    image.onload = async () => {
+                        const resultsDiv = document.createElement('div');
+                        resultsDiv.className = 'prediction-results';
+                        resultsDiv.innerHTML = `<img src="${image.src}" alt="Uploaded Image"><h2>Mga Prediksyon</h2>`;
+                        document.getElementById("main").appendChild(resultsDiv);
 
-                    // Load the models
-                    const ripenessModelURL = 'https://teachablemachine.withgoogle.com/models/bo4w33h6o/model.json';
-                    const statusModelURL = 'https://teachablemachine.withgoogle.com/models/3R2HPGq8E/model.json';
+                        try {
+                            // Load and run the ripening stage model
+                            const ripeningModelURL = "https://teachablemachine.withgoogle.com/models/7V236RqnY/model.json";
+                            const ripeningMetadataURL = "https://teachablemachine.withgoogle.com/models/7V236RqnY/metadata.json";
+                            const ripeningModel = await tmImage.load(ripeningModelURL, ripeningMetadataURL);
+                            const ripeningPrediction = await ripeningModel.predict(image);
 
-                    // Load models asynchronously and predict
-                    const [ripenessModel, statusModel] = await Promise.all([
-                        tmImage.load(ripenessModelURL),
-                        tmImage.load(statusModelURL)
-                    ]);
+                            // Find the ripening prediction with the highest confidence
+                            const highestRipeningPrediction = ripeningPrediction.reduce((prev, current) => 
+                                (prev.probability > current.probability) ? prev : current);
 
-                    const ripenessPrediction = await ripenessModel.predict(image);
-                    const statusPrediction = await statusModel.predict(image);
+                            // Display the ripening prediction
+                            const ripeningPercent = (highestRipeningPrediction.probability * 100).toFixed(2);
+                            let ripeningResultText = "";
+                            if (highestRipeningPrediction.className === "Ripe" && ripeningPercent >= 85) {
+                                ripeningResultText = `<p style="color:green;">${highestRipeningPrediction.className}: ${ripeningPercent}%</p>`;
+                            } else if (highestRipeningPrediction.className === "Ripe" && ripeningPercent < 85) {
+                                ripeningResultText = `<p style="color:red;">Hilaw: ${ripeningPercent}%</p>`;
+                            } else {
+                                ripeningResultText = `<p>${highestRipeningPrediction.className}: ${ripeningPercent}%</p>`;
+                            }
+                            resultsDiv.innerHTML += ripeningResultText;
 
-                    // Display the predictions
-                    let ripenessResults = `<h3>Hinog</h3>`;
-                    ripenessPrediction.forEach(prediction => {
-                        ripenessResults += `<p>${prediction.className}: ${(prediction.probability * 100).toFixed(2)}%</p>`;
-                    });
+                            // Load and run the rice field status model
+                            const statusModelURL = "https://teachablemachine.withgoogle.com/models/rYYZnO5oA/model.json";
+                            const statusMetadataURL = "https://teachablemachine.withgoogle.com/models/rYYZnO5oA/metadata.json";
+                            const statusModel = await tmImage.load(statusModelURL, statusMetadataURL);
+                            const statusPrediction = await statusModel.predict(image);
 
-                    let statusResults = `<h3>Kalagayan ng Palayan</h3>`;
-                    statusPrediction.forEach(prediction => {
-                        statusResults += `<p>${prediction.className}: ${(prediction.probability * 100).toFixed(2)}%</p>`;
-                    });
+                            // Display all status predictions with their confidence levels
+                            resultsDiv.innerHTML += "<h2>Status ng Palayan</h2>";
+                            statusPrediction.forEach(pred => {
+                                const statusPercent = (pred.probability * 100).toFixed(2);
+                                resultsDiv.innerHTML += `<p>${pred.className}: ${statusPercent}%</p>`;
+                            });
 
-                    resultsDiv.innerHTML += ripenessResults + statusResults;
+                            // Add "Muling Magklasipika" button
+                            const reclassifyBtn = document.createElement('button');
+                            reclassifyBtn.textContent = "Muling Magklasipika";
+                            reclassifyBtn.style.marginTop = "20px";
+                            reclassifyBtn.onclick = () => {
+                                document.getElementById("main").removeChild(resultsDiv);
+                                classifyImage();
+                            };
+                            resultsDiv.appendChild(reclassifyBtn);
+
+                        } catch (error) {
+                            console.error('Error during prediction:', error);
+                            resultsDiv.innerHTML += `<p style="color:red;">Error: ${error.message}</p>`;
+                        }
+                    };
                 }
             };
             input.click();
