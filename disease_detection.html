@@ -9,24 +9,26 @@
             font-family: Arial, sans-serif;
             margin: 0;
             padding: 0;
-            background: linear-gradient(to bottom right, #4CAF50, #A5D6A7);
+            background: linear-gradient(to bottom, #a8e063, #56ab2f);
             display: flex;
             flex-direction: column;
+            align-items: center;
             min-height: 100vh;
+            color: #333;
         }
         .header {
             text-align: center;
             padding: 20px;
-            background-color: #388E3C;
+            background-color: #4CAF50;
             color: white;
-            position: relative;
+            width: 100%;
         }
         .button-container {
-            text-align: center;
             margin: 20px;
             display: flex;
             flex-direction: column;
             align-items: center;
+            width: 100%;
         }
         .button-container button {
             padding: 10px 20px;
@@ -40,23 +42,31 @@
             margin: 10px;
             width: 100%;
             max-width: 300px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         }
         .button-container button:hover {
-            background-color: #66BB6A;
-            transform: translateY(-3px);
+            background-color: #45a049;
+            transform: scale(1.05);
         }
         .results {
             margin: 20px;
             text-align: center;
+            width: 100%;
         }
         .results img {
             max-width: 100%;
             border-radius: 10px;
+            display: none;
         }
-        .results p, .results h2, .results h3 {
+        .results p {
             font-size: 1.2em;
             color: #333;
+        }
+        video {
+            display: none;
+            width: 100%;
+            max-width: 300px;
+            margin-top: 20px;
+            border-radius: 10px;
         }
         .back-button {
             position: fixed;
@@ -70,11 +80,6 @@
             cursor: pointer;
             font-size: 1em;
             z-index: 1000;
-            transition: background-color 0.3s ease, transform 0.3s ease;
-        }
-        .back-button:hover {
-            background-color: #e57373;
-            transform: translateY(-3px);
         }
         @media (max-width: 600px) {
             .header {
@@ -97,9 +102,13 @@
     <button class="back-button" onclick="goBack()">Back</button>
     <div class="button-container">
         <button id="take-photo-btn">Kumuha ng Larawan</button>
+        <button id="capture-btn" style="display: none;">Kunan</button>
         <button id="reclassify-btn" style="display: none;">Muling Magklasipika</button>
     </div>
-    <div id="results" class="results"></div>
+    <video id="video"></video>
+    <div id="results" class="results">
+        <img id="captured-image" alt="Captured Image">
+    </div>
 
     <!-- Load TensorFlow.js and Teachable Machine Library -->
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
@@ -124,11 +133,16 @@
     <script type="text/javascript">
         const URL = "https://teachablemachine.withgoogle.com/models/YfzGFfzHw/";
 
-        let model, webcam, labelContainer, maxPredictions;
+        let model, video, canvas, capturedImage, ctx;
 
         document.getElementById('take-photo-btn').addEventListener('click', async () => {
-            const video = document.createElement('video');
-            document.body.appendChild(video);
+            video = document.getElementById('video');
+            capturedImage = document.getElementById('captured-image');
+            capturedImage.style.display = 'none'; // Hide captured image when taking a new photo
+
+            video.style.display = 'block'; // Show video
+            document.getElementById('capture-btn').style.display = 'block';
+            document.getElementById('take-photo-btn').style.display = 'none';
 
             const constraints = {
                 video: {
@@ -142,19 +156,36 @@
             video.srcObject = stream;
             video.play();
 
-            // Set up the camera and model
+            // Load the model
             await init();
+        });
 
-            const canvas = document.createElement('canvas');
+        document.getElementById('capture-btn').addEventListener('click', () => {
+            canvas = document.createElement('canvas');
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
-            const ctx = canvas.getContext('2d');
+            ctx = canvas.getContext('2d');
             ctx.drawImage(video, 0, 0);
 
             // Stop the video stream
-            stream.getTracks().forEach(track => track.stop());
+            const stream = video.srcObject;
+            const tracks = stream.getTracks();
+            tracks.forEach(track => track.stop());
 
-            // Classify the captured image
+            video.style.display = 'none'; // Hide video
+            capturedImage.src = canvas.toDataURL();
+            capturedImage.style.display = 'block'; // Show captured image
+
+            classifyImage(); // Classify the captured image
+        });
+
+        async function init() {
+            const modelURL = URL + "model.json";
+            const metadataURL = URL + "metadata.json";
+            model = await tmImage.load(modelURL, metadataURL);
+        }
+
+        async function classifyImage() {
             const predictions = await model.predict(canvas);
 
             const resultDiv = document.getElementById('results');
@@ -166,22 +197,14 @@
             const confidence = highestPrediction.probability.toFixed(2) * 100;
 
             if (confidence >= 95) {
-                resultDiv.innerHTML += `<img src="${canvas.toDataURL()}" alt="Captured Image"><h2>Prediksyon: ${highestPrediction.className} (${confidence}%)</h2>`;
-                checkInDatabase(highestPrediction.className);
+                checkInDatabase(highestPrediction.className, confidence);
                 document.getElementById('reclassify-btn').style.display = 'block';
             } else {
                 resultDiv.innerHTML += `<p>Wala pa sa Database</p>`;
             }
-        });
-
-        async function init() {
-            const modelURL = URL + "model.json";
-            const metadataURL = URL + "metadata.json";
-            model = await tmImage.load(modelURL, metadataURL);
-            maxPredictions = model.getTotalClasses();
         }
 
-        async function checkInDatabase(pestName) {
+        async function checkInDatabase(pestName, confidence) {
             const dbRef = firebase.database().ref('pests/' + pestName);
             dbRef.once('value', (snapshot) => {
                 if (snapshot.exists()) {
@@ -190,7 +213,6 @@
                     const description = pestInfo.description || 'No description available.';
                     const remedies = pestInfo.remedies || [];
 
-                    // Build HTML for remedies
                     let remediesHtml = '<p><strong>Remedies:</strong></p><ul>';
                     remedies.forEach((remedy, index) => {
                         remediesHtml += `<li>${index + 1}. ${remedy}</li>`;
@@ -198,7 +220,7 @@
                     remediesHtml += '</ul>';
 
                     document.getElementById('results').innerHTML = 
-                        `<h3>${name}</h3>
+                        `<h2>Prediksyon: ${name} (${confidence}%)</h2>
                         <p>${description}</p>
                         ${remediesHtml}`;
                 } else {
