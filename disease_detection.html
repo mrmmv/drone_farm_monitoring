@@ -119,10 +119,10 @@
     <script type="text/javascript">
         const URL = "https://teachablemachine.withgoogle.com/models/YfzGFfzHw/";
 
-        let model, webcam, labelContainer, maxPredictions;
+        let model, webcam, labelContainer, maxPredictions, video, stream;
 
         document.getElementById('take-photo-btn').addEventListener('click', async () => {
-            const video = document.createElement('video');
+            video = document.createElement('video');
             document.body.appendChild(video);
 
             const constraints = {
@@ -133,18 +133,23 @@
                 }
             };
 
-            const stream = await navigator.mediaDevices.getUserMedia(constraints);
+            stream = await navigator.mediaDevices.getUserMedia(constraints);
             video.srcObject = stream;
             video.play();
 
             await init();
 
+            video.addEventListener('loadeddata', captureImage);
+        });
+
+        async function captureImage() {
             const canvas = document.createElement('canvas');
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
             const ctx = canvas.getContext('2d');
             ctx.drawImage(video, 0, 0);
 
+            // Stop the video stream
             stream.getTracks().forEach(track => track.stop());
 
             const predictions = await model.predict(canvas);
@@ -164,7 +169,10 @@
             } else {
                 resultDiv.innerHTML = '<p>Wala pa sa Database</p>';
             }
-        });
+
+            // Remove video element
+            video.remove();
+        }
 
         async function init() {
             const modelURL = URL + "model.json";
