@@ -18,6 +18,7 @@
             text-align: center;
             padding: 20px;
             background-color: rgba(255, 255, 255, 0.8);
+            position: relative;
         }
         .header img {
             max-width: 100px;
@@ -26,6 +27,12 @@
             margin: 10px 0 0;
             font-size: 2em;
             color: #333;
+        }
+        .menu-icon {
+            position: absolute;
+            left: 20px;
+            top: 20px;
+            cursor: pointer;
         }
         .sidebar {
             height: 100%;
@@ -61,18 +68,6 @@
             transition: margin-left .5s;
             padding: 16px;
         }
-        .openbtn {
-            font-size: 1.5em;
-            cursor: pointer;
-            background-color: #4CAF50;
-            color: white;
-            padding: 10px 15px;
-            border: none;
-            border-radius: 5px;
-        }
-        .openbtn:hover {
-            background-color: #45a049;
-        }
         .prediction-results {
             margin-top: 20px;
             padding: 20px;
@@ -104,7 +99,7 @@
     <div class="header">
         <img src="https://thumbs.dreamstime.com/b/immerse-yourself-world-imagination-as-lively-cartoon-drone-takes-flight-against-pristine-white-background-image-ai-297729880.jpg" alt="Drone">
         <h1>Skynap</h1>
-        <button class="openbtn" onclick="openNav()">☰ Menu</button>
+        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/a/a4/Icono_menu_1.svg/800px-Icono_menu_1.svg.png" alt="Menu Icon" class="menu-icon" onclick="openNav()">
     </div>
 
     <div id="mySidebar" class="sidebar">
@@ -146,17 +141,6 @@
             window.location.href = "intent:#Intent;action=android.intent.action.MAIN;category=android.intent.category.LAUNCHER;package=com.yourpackage.lwfly;end";
         }
 
-        async function loadModel(modelURL) {
-            try {
-                const model = await tmImage.load(modelURL);
-                return model;
-            } catch (error) {
-                console.error("Error loading model:", error);
-                alert("Failed to load model. Check console for details.");
-                throw error; // re-throw to be caught in the calling function
-            }
-        }
-
         async function classifyImage() {
             const input = document.createElement('input');
             input.type = 'file';
@@ -171,33 +155,28 @@
                     resultsDiv.innerHTML = `<img src="${image.src}" alt="Uploaded Image"><h2>Mga Prediksyon</h2>`;
                     document.getElementById("main").appendChild(resultsDiv);
 
-                    try {
-                        // Load the ripeness model
-                        const ripenessModelURL = 'https://teachablemachine.withgoogle.com/models/bo4w33h6o/model.json';
-                        const ripenessModel = await loadModel(ripenessModelURL);
-                        const ripenessPrediction = await ripenessModel.predict(image);
+                    // Load the model for ripeness
+                    const ripenessModelURL = 'https://teachablemachine.withgoogle.com/models/bo4w33h6o/model.json';
+                    const ripenessModel = await tmImage.load(ripenessModelURL);
+                    const ripenessPrediction = await ripenessModel.predict(image);
 
-                        // Load the field status model
-                        const statusModelURL = 'https://teachablemachine.withgoogle.com/models/3R2HPGq8E/model.json';
-                        const statusModel = await loadModel(statusModelURL);
-                        const statusPrediction = await statusModel.predict(image);
+                    // Load the model for field status
+                    const statusModelURL = 'https://teachablemachine.withgoogle.com/models/3R2HPGq8E/model.json';
+                    const statusModel = await tmImage.load(statusModelURL);
+                    const statusPrediction = await statusModel.predict(image);
 
-                        // Display the predictions
-                        let ripenessResults = `<h3>Hinog</h3>`;
-                        ripenessPrediction.forEach(prediction => {
-                            ripenessResults += `<p>${prediction.className}: ${(prediction.probability * 100).toFixed(2)}%</p>`;
-                        });
+                    // Display the predictions
+                    let ripenessResults = `<h3>Hinog</h3>`;
+                    ripenessPrediction.forEach(prediction => {
+                        ripenessResults += `<p>${prediction.className}: ${(prediction.probability * 100).toFixed(2)}%</p>`;
+                    });
 
-                        let statusResults = `<h3>Kalagayan ng Palayan</h3>`;
-                        statusPrediction.forEach(prediction => {
-                            statusResults += `<p>${prediction.className}: ${(prediction.probability * 100).toFixed(2)}%</p>`;
-                        });
+                    let statusResults = `<h3>Kalagayan ng Palayan</h3>`;
+                    statusPrediction.forEach(prediction => {
+                        statusResults += `<p>${prediction.className}: ${(prediction.probability * 100).toFixed(2)}%</p>`;
+                    });
 
-                        resultsDiv.innerHTML += ripenessResults + statusResults;
-                    } catch (error) {
-                        console.error("Error during prediction:", error);
-                        resultsDiv.innerHTML += "<p>Error in prediction. Check console for details.</p>";
-                    }
+                    resultsDiv.innerHTML += ripenessResults + statusResults;
                 }
             };
             input.click();
