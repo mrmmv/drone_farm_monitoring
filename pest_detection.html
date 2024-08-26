@@ -159,17 +159,31 @@
         }
 
         async function checkInDatabase(diseaseName) {
-            const dbRef = firebase.database().ref('diseases/' + diseaseName);
-            dbRef.once('value', (snapshot) => {
-                if (snapshot.exists()) {
-                    const remedies = snapshot.val().remedies;
-                    document.getElementById('results').innerHTML += `<p>Impormasyon: ${Information}</p>`;
-                    document.getElementById('results').innerHTML += `<p>Mga Kagamutan: ${remedies}</p>`;
-                } else {
-                    document.getElementById('results').innerHTML += `<p>Not found in the database!</p>`;
-                }
+    const dbRef = firebase.database().ref('diseases/' + diseaseName);
+    dbRef.once('value', (snapshot) => {
+        if (snapshot.exists()) {
+            const diseaseInfo = snapshot.val();
+            const name = diseaseInfo.name || 'Unknown';
+            const description = diseaseInfo.description || 'No description available.';
+            const remedies = diseaseInfo.remedies || [];
+
+            // Build HTML for remedies
+            let remediesHtml = '<p><strong>Remedies:</strong></p><ul>';
+            remedies.forEach((remedy, index) => {
+                remediesHtml += `<li>${index + 1}. ${remedy}</li>`;
             });
+            remediesHtml += '</ul>';
+
+            document.getElementById('results').innerHTML = 
+                `<h3>${name}</h3>
+                <p>${description}</p>
+                ${remediesHtml}`;
+        } else {
+            document.getElementById('results').innerHTML = `<p>Not found in the database!</p>`;
         }
+    });
+}
+
 
         document.getElementById('reclassify-btn').addEventListener('click', () => {
             document.getElementById('take-photo-btn').click();
