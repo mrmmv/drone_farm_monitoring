@@ -10,12 +10,16 @@
             margin: 0;
             padding: 0;
             background: #f4f4f4;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
         }
         .header {
             text-align: center;
             padding: 20px;
             background-color: #4CAF50;
             color: white;
+            position: relative;
         }
         .button-container {
             text-align: center;
@@ -30,6 +34,7 @@
             border: none;
             border-radius: 5px;
             transition: background-color 0.3s ease;
+            margin: 10px;
         }
         .button-container button:hover {
             background-color: #45a049;
@@ -46,14 +51,29 @@
             font-size: 1.2em;
             color: #333;
         }
+        .back-button {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            padding: 10px 20px;
+            background-color: #f44336;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1em;
+            z-index: 1000;
+        }
     </style>
 </head>
 <body>
     <div class="header">
         <h1>Pagtuklas ng Peste</h1>
     </div>
+    <button class="back-button" onclick="goBack()">Back</button>
     <div class="button-container">
         <button id="take-photo-btn">Kumuha ng Larawan</button>
+        <button id="reclassify-btn" style="display: none;">Muling Magklasipika</button>
     </div>
     <div id="results" class="results"></div>
 
@@ -125,6 +145,7 @@
             if (confidence >= 95) {
                 resultDiv.innerHTML += `<img src="${canvas.toDataURL()}" alt="Captured Image"><h2>Prediksyon: ${highestPrediction.className} (${confidence}%)</h2>`;
                 checkInDatabase(highestPrediction.className);
+                document.getElementById('reclassify-btn').style.display = 'block';
             } else {
                 resultDiv.innerHTML += `<p>Wala pa sa Database</p>`;
             }
@@ -148,7 +169,14 @@
                 }
             });
         }
+
+        document.getElementById('reclassify-btn').addEventListener('click', () => {
+            document.getElementById('take-photo-btn').click();
+        });
+
+        function goBack() {
+            window.location.href = 'index.html'; // Replace with the URL of your main page
+        }
     </script>
 </body>
 </html>
-
