@@ -163,7 +163,8 @@
             dbRef.once('value', (snapshot) => {
                 if (snapshot.exists()) {
                     const remedies = snapshot.val().remedies;
-                    document.getElementById('results').innerHTML += `<p>Remedies: ${remedies}</p>`;
+                    document.getElementById('results').innerHTML += `<p>Impormasyon: ${Information}</p>`;
+                    document.getElementById('results').innerHTML += `<p>Mga Kagamutan: ${remedies}</p>`;
                 } else {
                     document.getElementById('results').innerHTML += `<p>Not found in the database!</p>`;
                 }
