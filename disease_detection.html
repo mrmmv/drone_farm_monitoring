@@ -12,6 +12,7 @@
             background: #f4f4f4;
             display: flex;
             flex-direction: column;
+            align-items: center;
             min-height: 100vh;
         }
         .header {
@@ -19,14 +20,11 @@
             padding: 20px;
             background-color: #4CAF50;
             color: white;
+            width: 100%;
         }
         .button-container {
             text-align: center;
-            margin-top: auto;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
+            margin: 20px;
         }
         .button-container button {
             padding: 10px 20px;
@@ -38,7 +36,7 @@
             border-radius: 5px;
             transition: background-color 0.3s ease;
             margin: 10px;
-            width: 100%;
+            width: 90%;
             max-width: 300px;
         }
         .button-container button:hover {
@@ -47,15 +45,15 @@
         .results {
             margin: 20px;
             text-align: center;
-            flex-grow: 1;
+            width: 90%;
+            max-width: 400px;
         }
         .results img {
-            max-width: 100%;
+            width: 100%;
             border-radius: 10px;
-            margin-bottom: 20px;
         }
         .results p, .results h2, .results h3 {
-            font-size: 1.2em;
+            font-size: 1em;
             color: #333;
         }
         .back-button {
@@ -71,16 +69,13 @@
             font-size: 1em;
             z-index: 1000;
         }
-        @media (max-width: 600px) {
-            .header {
-                font-size: 1.5em;
-                padding: 15px;
-            }
+        @media (min-width: 600px) {
             .button-container button {
-                font-size: 1em;
+                font-size: 1.2em;
+                width: auto;
             }
-            .results p, .results h2, .results h3 {
-                font-size: 1em;
+            .results {
+                max-width: 600px;
             }
         }
     </style>
@@ -90,11 +85,11 @@
         <h1>Pagtuklas ng Peste</h1>
     </div>
     <button class="back-button" onclick="goBack()">Back</button>
-    <div id="results" class="results"></div>
     <div class="button-container">
-        <button id="take-photo-btn">Kunan ng Larawan</button>
+        <button id="take-photo-btn">Kumuha ng Larawan</button>
         <button id="reclassify-btn" style="display: none;">Muling Magklasipika</button>
     </div>
+    <div id="results" class="results"></div>
 
     <!-- Load TensorFlow.js and Teachable Machine Library -->
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
@@ -104,6 +99,7 @@
 
     <!-- Your Firebase configuration -->
     <script>
+        // Add your Firebase project configuration
         const firebaseConfig = {
             apiKey: "AIzaSyD4kYnLgUzzIZt1XUWL9DEQ5j-YhbE1C_0",
             authDomain: "farm-monitoring-7d029.firebaseapp.com",
@@ -119,30 +115,32 @@
     <script type="text/javascript">
         const URL = "https://teachablemachine.withgoogle.com/models/YfzGFfzHw/";
 
-        let model, webcam, labelContainer, maxPredictions, video, stream;
+        let model, webcam, maxPredictions;
 
         document.getElementById('take-photo-btn').addEventListener('click', async () => {
-            video = document.createElement('video');
+            captureImage();
+        });
+
+        async function captureImage() {
+            const video = document.createElement('video');
             document.body.appendChild(video);
 
             const constraints = {
                 video: {
-                    facingMode: 'environment', 
+                    facingMode: 'environment', // Use the back camera
                     width: { ideal: 1280 },
                     height: { ideal: 720 }
                 }
             };
 
-            stream = await navigator.mediaDevices.getUserMedia(constraints);
+            const stream = await navigator.mediaDevices.getUserMedia(constraints);
             video.srcObject = stream;
             video.play();
 
+            // Load the model
             await init();
 
-            video.addEventListener('loadeddata', captureImage);
-        });
-
-        async function captureImage() {
+            // Capture image
             const canvas = document.createElement('canvas');
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
@@ -152,8 +150,23 @@
             // Stop the video stream
             stream.getTracks().forEach(track => track.stop());
 
+            // Remove video element
+            document.body.removeChild(video);
+
+            // Classify the captured image
             const predictions = await model.predict(canvas);
 
+            displayResults(predictions, canvas);
+        }
+
+        async function init() {
+            const modelURL = URL + "model.json";
+            const metadataURL = URL + "metadata.json";
+            model = await tmImage.load(modelURL, metadataURL);
+            maxPredictions = model.getTotalClasses();
+        }
+
+        function displayResults(predictions, canvas) {
             const resultDiv = document.getElementById('results');
             resultDiv.innerHTML = '';
 
@@ -163,22 +176,12 @@
             const confidence = highestPrediction.probability.toFixed(2) * 100;
 
             if (confidence >= 95) {
-                resultDiv.innerHTML = `<img src="${canvas.toDataURL()}" alt="Captured Image"><h2>Prediksyon: ${highestPrediction.className} (${confidence}%)</h2>`;
+                resultDiv.innerHTML += `<img src="${canvas.toDataURL()}" alt="Captured Image"><h2>Prediksyon: ${highestPrediction.className} (${confidence}%)</h2>`;
                 checkInDatabase(highestPrediction.className);
                 document.getElementById('reclassify-btn').style.display = 'block';
             } else {
-                resultDiv.innerHTML = '<p>Wala pa sa Database</p>';
+                resultDiv.innerHTML += `<p>Wala pa sa Database</p>`;
             }
-
-            // Remove video element
-            video.remove();
-        }
-
-        async function init() {
-            const modelURL = URL + "model.json";
-            const metadataURL = URL + "metadata.json";
-            model = await tmImage.load(modelURL, metadataURL);
-            maxPredictions = model.getTotalClasses();
         }
 
         async function checkInDatabase(pestName) {
@@ -190,28 +193,29 @@
                     const description = pestInfo.description || 'No description available.';
                     const remedies = pestInfo.remedies || [];
 
+                    // Build HTML for remedies
                     let remediesHtml = '<p><strong>Remedies:</strong></p><ul>';
                     remedies.forEach((remedy, index) => {
                         remediesHtml += `<li>${index + 1}. ${remedy}</li>`;
                     });
                     remediesHtml += '</ul>';
 
-                    document.getElementById('results').innerHTML = 
+                    document.getElementById('results').innerHTML += 
                         `<h3>${name}</h3>
                         <p>${description}</p>
                         ${remediesHtml}`;
                 } else {
-                    document.getElementById('results').innerHTML = '<p>Not found in the database!</p>';
+                    document.getElementById('results').innerHTML += `<p>Not found in the database!</p>`;
                 }
             });
         }
 
         document.getElementById('reclassify-btn').addEventListener('click', () => {
-            document.getElementById('take-photo-btn').click();
+            captureImage();
         });
 
         function goBack() {
-            window.location.href = 'index.html';
+            window.location.href = 'index.html'; // Replace with the URL of your main page
         }
     </script>
 </body>
