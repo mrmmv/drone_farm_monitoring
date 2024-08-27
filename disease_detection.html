@@ -9,10 +9,9 @@
             font-family: Arial, sans-serif;
             margin: 0;
             padding: 0;
-            background: #f4f4f4;
+            background: linear-gradient(120deg, #a8e063, #56ab2f); /* Gradient green background */
             display: flex;
             flex-direction: column;
-            align-items: center;
             min-height: 100vh;
         }
         .header {
@@ -20,7 +19,7 @@
             padding: 20px;
             background-color: #4CAF50;
             color: white;
-            width: 100%;
+            position: relative;
         }
         .button-container {
             text-align: center;
@@ -36,8 +35,6 @@
             border-radius: 5px;
             transition: background-color 0.3s ease;
             margin: 10px;
-            width: 90%;
-            max-width: 300px;
         }
         .button-container button:hover {
             background-color: #45a049;
@@ -45,15 +42,13 @@
         .results {
             margin: 20px;
             text-align: center;
-            width: 90%;
-            max-width: 400px;
         }
         .results img {
-            width: 100%;
+            max-width: 100%;
             border-radius: 10px;
         }
-        .results p, .results h2, .results h3 {
-            font-size: 1em;
+        .results p {
+            font-size: 1.2em;
             color: #333;
         }
         .back-button {
@@ -68,15 +63,6 @@
             cursor: pointer;
             font-size: 1em;
             z-index: 1000;
-        }
-        @media (min-width: 600px) {
-            .button-container button {
-                font-size: 1.2em;
-                width: auto;
-            }
-            .results {
-                max-width: 600px;
-            }
         }
     </style>
 </head>
@@ -115,13 +101,9 @@
     <script type="text/javascript">
         const URL = "https://teachablemachine.withgoogle.com/models/YfzGFfzHw/";
 
-        let model, webcam, maxPredictions;
+        let model, webcam, labelContainer, maxPredictions;
 
         document.getElementById('take-photo-btn').addEventListener('click', async () => {
-            captureImage();
-        });
-
-        async function captureImage() {
             const video = document.createElement('video');
             document.body.appendChild(video);
 
@@ -137,10 +119,9 @@
             video.srcObject = stream;
             video.play();
 
-            // Load the model
+            // Set up the camera and model
             await init();
 
-            // Capture image
             const canvas = document.createElement('canvas');
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
@@ -150,23 +131,9 @@
             // Stop the video stream
             stream.getTracks().forEach(track => track.stop());
 
-            // Remove video element
-            document.body.removeChild(video);
-
             // Classify the captured image
             const predictions = await model.predict(canvas);
 
-            displayResults(predictions, canvas);
-        }
-
-        async function init() {
-            const modelURL = URL + "model.json";
-            const metadataURL = URL + "metadata.json";
-            model = await tmImage.load(modelURL, metadataURL);
-            maxPredictions = model.getTotalClasses();
-        }
-
-        function displayResults(predictions, canvas) {
             const resultDiv = document.getElementById('results');
             resultDiv.innerHTML = '';
 
@@ -182,6 +149,13 @@
             } else {
                 resultDiv.innerHTML += `<p>Wala pa sa Database</p>`;
             }
+        });
+
+        async function init() {
+            const modelURL = URL + "model.json";
+            const metadataURL = URL + "metadata.json";
+            model = await tmImage.load(modelURL, metadataURL);
+            maxPredictions = model.getTotalClasses();
         }
 
         async function checkInDatabase(pestName) {
@@ -194,29 +168,4 @@
                     const remedies = pestInfo.remedies || [];
 
                     // Build HTML for remedies
-                    let remediesHtml = '<p><strong>Remedies:</strong></p><ul>';
-                    remedies.forEach((remedy, index) => {
-                        remediesHtml += `<li>${index + 1}. ${remedy}</li>`;
-                    });
-                    remediesHtml += '</ul>';
-
-                    document.getElementById('results').innerHTML += 
-                        `<h3>${name}</h3>
-                        <p>${description}</p>
-                        ${remediesHtml}`;
-                } else {
-                    document.getElementById('results').innerHTML += `<p>Not found in the database!</p>`;
-                }
-            });
-        }
-
-        document.getElementById('reclassify-btn').addEventListener('click', () => {
-            captureImage();
-        });
-
-        function goBack() {
-            window.location.href = 'index.html'; // Replace with the URL of your main page
-        }
-    </script>
-</body>
-</html>
+                    let re
