@@ -44,8 +44,21 @@
         .button-container button:hover {
             background-color: #45a049;
         }
-        .results {
+        .camera-container {
+            display: none;
+            position: relative;
+            width: 90vw;
+            height: 70vh;
+            overflow: hidden;
+            border-radius: 10px;
+        }
+        .camera-container video {
             width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .results {
+            width: 90vw;
             max-width: 600px;
             margin: 20px;
             text-align: center;
@@ -94,6 +107,9 @@
         <button id="take-photo-btn">Kumuha ng Larawan</button>
         <button id="reclassify-btn" style="display: none;">Muling Magklasipika</button>
     </div>
+    <div class="camera-container" id="camera-container">
+        <video id="video" autoplay playsinline></video>
+    </div>
     <div id="results" class="results"></div>
 
     <!-- Load TensorFlow.js and Teachable Machine Library -->
@@ -120,11 +136,13 @@
     <script type="text/javascript">
         const URL = "https://teachablemachine.withgoogle.com/models/YfzGFfzHw/";
 
-        let model, webcam, labelContainer, maxPredictions;
+        let model, maxPredictions;
 
         document.getElementById('take-photo-btn').addEventListener('click', async () => {
-            const video = document.createElement('video');
-            document.body.appendChild(video);
+            const video = document.getElementById('video');
+            const cameraContainer = document.getElementById('camera-container');
+
+            cameraContainer.style.display = 'block';
 
             const constraints = {
                 video: {
@@ -134,39 +152,46 @@
                 }
             };
 
-            const stream = await navigator.mediaDevices.getUserMedia(constraints);
-            video.srcObject = stream;
-            video.play();
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia(constraints);
+                video.srcObject = stream;
+                video.play();
 
-            // Set up the camera and model
-            await init();
+                await init();
 
-            const canvas = document.createElement('canvas');
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(video, 0, 0);
+                video.addEventListener('loadeddata', async () => {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-            // Stop the video stream
-            stream.getTracks().forEach(track => track.stop());
+                    // Stop the video stream
+                    stream.getTracks().forEach(track => track.stop());
 
-            // Classify the captured image
-            const predictions = await model.predict(canvas);
+                    cameraContainer.style.display = 'none';
 
-            const resultDiv = document.getElementById('results');
-            resultDiv.innerHTML = '';
+                    // Classify the captured image
+                    const predictions = await model.predict(canvas);
 
-            let highestPrediction = predictions.reduce((prev, current) =>
-                (prev.probability > current.probability) ? prev : current);
+                    const resultDiv = document.getElementById('results');
+                    resultDiv.innerHTML = '';
 
-            const confidence = highestPrediction.probability.toFixed(2) * 100;
+                    let highestPrediction = predictions.reduce((prev, current) =>
+                        (prev.probability > current.probability) ? prev : current);
 
-            if (confidence >= 95) {
-                resultDiv.innerHTML += `<img src="${canvas.toDataURL()}" alt="Captured Image"><h2>Prediksyon: ${highestPrediction.className} (${confidence}%)</h2>`;
-                checkInDatabase(highestPrediction.className);
-                document.getElementById('reclassify-btn').style.display = 'block';
-            } else {
-                resultDiv.innerHTML += `<p>Wala pa sa Database</p>`;
+                    const confidence = (highestPrediction.probability * 100).toFixed(2);
+
+                    if (confidence >= 95) {
+                        resultDiv.innerHTML += `<img src="${canvas.toDataURL()}" alt="Captured Image"><h2>Prediksyon: ${highestPrediction.className} (${confidence}%)</h2>`;
+                        checkInDatabase(highestPrediction.className);
+                        document.getElementById('reclassify-btn').style.display = 'block';
+                    } else {
+                        resultDiv.innerHTML += `<p>Wala pa sa Database</p>`;
+                    }
+                });
+            } catch (err) {
+                console.error("Error accessing the camera: ", err);
             }
         });
 
