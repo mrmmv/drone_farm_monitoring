@@ -13,6 +13,7 @@
             display: flex;
             flex-direction: column;
             align-items: center;
+            justify-content: space-between;
             min-height: 100vh;
         }
         .header {
@@ -22,15 +23,27 @@
             background-color: #4CAF50;
             color: white;
         }
+        .camera-container {
+            position: relative;
+            width: 90vw;
+            height: 70vh;
+            overflow: hidden;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .camera-container video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
         .button-container {
             display: flex;
-            flex-wrap: wrap;
             justify-content: center;
-            margin: 20px;
-            width: 100%;
+            margin-top: 10px;
         }
         .button-container button {
-            flex: 1 1 200px;
             padding: 10px 20px;
             font-size: 1.2em;
             cursor: pointer;
@@ -39,33 +52,25 @@
             border: none;
             border-radius: 5px;
             transition: background-color 0.3s ease;
-            margin: 10px;
         }
         .button-container button:hover {
             background-color: #45a049;
         }
-        .camera-container {
-            display: none;
-            position: relative;
-            width: 90vw;
-            height: 70vh;
-            overflow: hidden;
-            border-radius: 10px;
-        }
-        .camera-container video {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
         .results {
             width: 90vw;
             max-width: 600px;
-            margin: 20px;
+            margin-top: auto;
+            margin-bottom: 20px;
             text-align: center;
         }
-        .results img {
-            max-width: 100%;
-            height: auto;
+        .captured-image-container {
+            display: flex;
+            justify-content: center;
+            margin-top: 20px;
+        }
+        .captured-image {
+            width: 50vw; /* Adjust the width for the container */
+            max-width: 300px; /* Limit the max width */
             border-radius: 10px;
         }
         .results p {
@@ -90,7 +95,8 @@
                 flex-direction: column;
             }
             .button-container button {
-                flex: 1 1 100%;
+                margin-bottom: 10px;
+                width: 100%;
             }
             .header {
                 font-size: 1.5em;
@@ -103,13 +109,14 @@
         <h1>Pagtuklas ng Peste</h1>
     </div>
     <button class="back-button" onclick="goBack()">Back</button>
+    <div class="camera-container" id="camera-container">
+        <video id="video" autoplay playsinline></video>
+    </div>
     <div class="button-container">
         <button id="take-photo-btn">Kumuha ng Larawan</button>
         <button id="reclassify-btn" style="display: none;">Muling Magklasipika</button>
     </div>
-    <div class="camera-container" id="camera-container">
-        <video id="video" autoplay playsinline></video>
-    </div>
+    <div class="captured-image-container" id="captured-image-container"></div>
     <div id="results" class="results"></div>
 
     <!-- Load TensorFlow.js and Teachable Machine Library -->
@@ -142,7 +149,7 @@
             const video = document.getElementById('video');
             const cameraContainer = document.getElementById('camera-container');
 
-            cameraContainer.style.display = 'block';
+            cameraContainer.style.display = 'flex'; // Ensure the container is visible
 
             const constraints = {
                 video: {
@@ -171,6 +178,10 @@
 
                     cameraContainer.style.display = 'none';
 
+                    // Display the captured image in the container
+                    const capturedImageContainer = document.getElementById('captured-image-container');
+                    capturedImageContainer.innerHTML = `<img src="${canvas.toDataURL()}" alt="Captured Image" class="captured-image">`;
+
                     // Classify the captured image
                     const predictions = await model.predict(canvas);
 
@@ -183,7 +194,7 @@
                     const confidence = (highestPrediction.probability * 100).toFixed(2);
 
                     if (confidence >= 95) {
-                        resultDiv.innerHTML += `<img src="${canvas.toDataURL()}" alt="Captured Image"><h2>Prediksyon: ${highestPrediction.className} (${confidence}%)</h2>`;
+                        resultDiv.innerHTML += `<h2>Prediksyon: ${highestPrediction.className} (${confidence}%)</h2>`;
                         checkInDatabase(highestPrediction.className);
                         document.getElementById('reclassify-btn').style.display = 'block';
                     } else {
@@ -233,8 +244,9 @@
         });
 
         function goBack() {
-            window.location.href = 'index.html'; // Replace with the URL of your main page
+            window.history.back();
         }
+
     </script>
 </body>
 </html>
