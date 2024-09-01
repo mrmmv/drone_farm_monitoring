@@ -272,7 +272,18 @@
                 .then(snapshot => {
                     const recommendation = snapshot.val();
                     if (recommendation) {
-                        resultDiv.innerHTML += `<br><strong>Recommendation:</strong> ${recommendation}`;
+                        if (typeof recommendation === 'object') {
+                            // Construct the HTML for the recommendation
+                            const name = recommendation.name;
+                            const description = recommendation.description;
+                            const remedies = recommendation.remedies.join('<br>');
+
+                            resultDiv.innerHTML += `<br><strong>Name:</strong> ${name}`;
+                            resultDiv.innerHTML += `<br><strong>Description:</strong> ${description}`;
+                            resultDiv.innerHTML += `<br><strong>Remedies:</strong> ${remedies}`;
+                        } else {
+                            resultDiv.innerHTML += `<br><strong>Recommendation:</strong> ${recommendation}`;
+                        }
                     } else {
                         resultDiv.innerHTML += `<br><strong>Recommendation:</strong> No recommendation available for ${pestName}.`;
                     }
