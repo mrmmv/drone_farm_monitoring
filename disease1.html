@@ -103,6 +103,9 @@
         let capturedImage = document.getElementById('capturedImage');
         let resultDiv = document.getElementById('result');
 
+        // Set WebGL backend for faster processing
+        tf.setBackend('webgl');
+
         // Load the model
         async function loadModel() {
             model = await tf.loadLayersModel('https://teachablemachine.withgoogle.com/models/YfzGFfzHw/model.json');
@@ -144,7 +147,11 @@
 
         // Classify the captured image
         async function classifyImage() {
-            const image = tf.browser.fromPixels(capturedImage).resizeNearestNeighbor([224, 224]).toFloat().expandDims().div(255.0);
+            const image = tf.browser.fromPixels(capturedImage)
+                .resizeNearestNeighbor([224, 224]) // Resize to the model's expected input size
+                .toFloat()
+                .expandDims()
+                .div(255.0); // Normalize the image to 0-1 range
             const prediction = await model.predict(image).data();
             const topPrediction = Array.from(prediction)
                 .map((p, i) => ({ probability: p, className: getClassName(i) }))
