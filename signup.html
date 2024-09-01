@@ -73,11 +73,17 @@
         <p>Already have an account? <a href="index.html">Sign in here</a></p>
     </div>
 
-    <!-- Firebase JS SDK -->
+    <!-- Load Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js"></script>
+
+    <!-- Your custom script -->
     <script>
-        // Your Firebase configuration
+        // Importing functions from Firebase SDK
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-app.js";
+        import { getAuth, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js";
+
+        // Firebase configuration
         const firebaseConfig = {
             apiKey: "AIzaSyD4kYnLgUzzIZt1XUWL9DEQ5j-YhbE1C_0",
             authDomain: "farm-monitoring-7d029.firebaseapp.com",
@@ -89,9 +95,10 @@
         };
 
         // Initialize Firebase
-        const app = firebase.initializeApp(firebaseConfig);
-        const auth = firebase.auth();
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
 
+        // Sign up when button is clicked
         const signUpBtn = document.getElementById('signUpBtn');
         const emailInput = document.getElementById('email');
         const passwordInput = document.getElementById('password');
@@ -101,7 +108,7 @@
             const email = emailInput.value;
             const password = passwordInput.value;
 
-            auth.createUserWithEmailAndPassword(email, password)
+            createUserWithEmailAndPassword(auth, email, password)
                 .then(userCredential => {
                     window.location.href = "index.html"; // Redirect to sign-in page after successful sign-up
                 })
