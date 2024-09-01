@@ -13,7 +13,10 @@
             justify-content: center;
             align-items: center;
             height: 100vh;
-            background-color: #f0f0f0;
+            background: linear-gradient(to right, #00b09b, #96c93d); /* Gradient green background */
+            background-image: url('your-background-image.jpg'); /* Replace with your background image */
+            background-size: cover;
+            background-position: center;
         }
         .auth-container {
             background-color: white;
@@ -30,7 +33,7 @@
             color: #333;
         }
         .auth-container input {
-            width: 100%;
+            width: calc(100% - 20px); /* Adjust width to fit within padding */
             padding: 10px;
             margin: 10px 0;
             font-size: 16px;
@@ -38,7 +41,7 @@
             border: 1px solid #ccc;
         }
         .auth-container button {
-            width: 100%;
+            width: calc(100% - 20px); /* Adjust width to fit within padding */
             padding: 10px;
             font-size: 16px;
             cursor: pointer;
@@ -76,13 +79,7 @@
     <!-- Load Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js"></script>
-
-    <!-- Your custom script -->
     <script>
-        // Importing functions from Firebase SDK
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-app.js";
-        import { getAuth, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js";
-
         // Firebase configuration
         const firebaseConfig = {
             apiKey: "AIzaSyD4kYnLgUzzIZt1XUWL9DEQ5j-YhbE1C_0",
@@ -95,8 +92,8 @@
         };
 
         // Initialize Firebase
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
+        const app = firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth(app);
 
         // Sign up when button is clicked
         const signUpBtn = document.getElementById('signUpBtn');
@@ -108,7 +105,7 @@
             const email = emailInput.value;
             const password = passwordInput.value;
 
-            createUserWithEmailAndPassword(auth, email, password)
+            auth.createUserWithEmailAndPassword(email, password)
                 .then(userCredential => {
                     window.location.href = "index.html"; // Redirect to sign-in page after successful sign-up
                 })
