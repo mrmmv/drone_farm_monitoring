@@ -115,6 +115,9 @@
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@3.20.0/dist/tf.min.js"></script>
     <!-- Load Teachable Machine Library -->
     <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
+    <!-- Load Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.21.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.21.0/firebase-database.js"></script>
 </head>
 <body>
 
@@ -136,6 +139,31 @@
     </div>
 
     <script>
+        // Initialize Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyD4kYnLgUzzIZt1XUWL9DEQ5j-YhbE1C_0",
+            authDomain: "farm-monitoring-7d029.firebaseapp.com",
+            databaseURL: "https://farm-monitoring-7d029-default-rtdb.firebaseio.com",
+            projectId: "farm-monitoring-7d029",
+            storageBucket: "farm-monitoring-7d029.appspot.com",
+            messagingSenderId: "205970011096",
+            appId: "1:205970011096:web:5a0718eb27438d499af8ad"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+
+        let ripeningModel, statusModel;
+
+        // Preload models on page load
+        window.onload = async function() {
+            const ripeningModelURL = "https://teachablemachine.withgoogle.com/models/7V236RqnY/model.json";
+            const ripeningMetadataURL = "https://teachablemachine.withgoogle.com/models/7V236RqnY/metadata.json";
+            const statusModelURL = "https://teachablemachine.withgoogle.com/models/rYYZnO5oA/model.json";
+            const statusMetadataURL = "https://teachablemachine.withgoogle.com/models/rYYZnO5oA/metadata.json";
+            ripeningModel = await tmImage.load(ripeningModelURL, ripeningMetadataURL);
+            statusModel = await tmImage.load(statusModelURL, statusMetadataURL);
+        };
+
         function openNav() {
             document.getElementById("mySidebar").style.width = "250px";
             document.getElementById("main").style.marginLeft = "250px";
@@ -147,8 +175,8 @@
         }
 
         function goToRiceFieldStatus() {
-            const statusPageHtml = `
-                <div class="main-buttons">
+            const statusPageHtml = 
+                `<div class="main-buttons">
                     <button onclick="openLwFly()">Drone Vision</button>
                     <button onclick="classifyImage()">I-classify ang Imahe</button>
                 </div>
@@ -179,54 +207,43 @@
                         document.getElementById("main").appendChild(resultsDiv);
 
                         try {
-                            // Load and run the ripening stage model
-                            const ripeningModelURL = "https://teachablemachine.withgoogle.com/models/7V236RqnY/model.json";
-                            const ripeningMetadataURL = "https://teachablemachine.withgoogle.com/models/7V236RqnY/metadata.json";
-                            const ripeningModel = await tmImage.load(ripeningModelURL, ripeningMetadataURL);
+                            // Run the ripening stage model
                             const ripeningPrediction = await ripeningModel.predict(image);
-
-                            // Find the ripening prediction with the highest confidence
                             const highestRipeningPrediction = ripeningPrediction.reduce((prev, current) => 
                                 (prev.probability > current.probability) ? prev : current);
-
-                            // Display the ripening prediction
                             const ripeningPercent = (highestRipeningPrediction.probability * 100).toFixed(2);
                             let ripeningResultText = "";
                             if (highestRipeningPrediction.className === "Ripe" && ripeningPercent >= 85) {
                                 ripeningResultText = `<p style="color:green;">${highestRipeningPrediction.className}: ${ripeningPercent}%</p>`;
                             } else if (highestRipeningPrediction.className === "Ripe" && ripeningPercent < 85) {
-                                ripeningResultText = `<p style="color:red;">Hilaw: ${ripeningPercent}%</p>`;
+                                ripeningResultText = `<p style="color:orange;">${highestRipeningPrediction.className}: ${ripeningPercent}%</p>`;
                             } else {
-                                ripeningResultText = `<p>${highestRipeningPrediction.className}: ${ripeningPercent}%</p>`;
+                                ripeningResultText = `<p style="color:red;">${highestRipeningPrediction.className}: ${ripeningPercent}%</p>`;
                             }
-                            resultsDiv.innerHTML += ripeningResultText;
 
-                            // Load and run the rice field status model
-                            const statusModelURL = "https://teachablemachine.withgoogle.com/models/rYYZnO5oA/model.json";
-                            const statusMetadataURL = "https://teachablemachine.withgoogle.com/models/rYYZnO5oA/metadata.json";
-                            const statusModel = await tmImage.load(statusModelURL, statusMetadataURL);
+                            resultsDiv.innerHTML += `<h2>Ripening Stage:</h2>${ripeningResultText}`;
+
+                            // Run the rice field status model
                             const statusPrediction = await statusModel.predict(image);
+                            const highestStatusPrediction = statusPrediction.reduce((prev, current) => 
+                                (prev.probability > current.probability) ? prev : current);
+                            const statusPercent = (highestStatusPrediction.probability * 100).toFixed(2);
+                            const statusResultText = `<p>${highestStatusPrediction.className}: ${statusPercent}%</p>`;
+                            resultsDiv.innerHTML += `<h2>Rice Field Status:</h2>${statusResultText}`;
 
-                            // Display all status predictions with their confidence levels
-                            resultsDiv.innerHTML += "<h2>Status ng Palayan</h2>";
-                            statusPrediction.forEach(pred => {
-                                const statusPercent = (pred.probability * 100).toFixed(2);
-                                resultsDiv.innerHTML += `<p>${pred.className}: ${statusPercent}%</p>`;
+                            // Fetch recommendations from Firebase
+                            const recommendationRef = firebase.database().ref('Status/' + highestStatusPrediction.className);
+                            recommendationRef.once('value', (snapshot) => {
+                                if (snapshot.exists()) {
+                                    const recommendation = snapshot.val();
+                                    const message = recommendation.remedies.join('<br>');
+                                    resultsDiv.innerHTML += `<h2>Rekomendasyon:</h2><p>${message}</p>`;
+                                } else {
+                                    resultsDiv.innerHTML += `<h2>Rekomendasyon:</h2><p>Walang available na rekomendasyon para sa kategoryang ito.</p>`;
+                                }
                             });
-
-                            // Add "Muling Magklasipika" button
-                            const reclassifyBtn = document.createElement('button');
-                            reclassifyBtn.textContent = "Muling Magklasipika";
-                            reclassifyBtn.style.marginTop = "20px";
-                            reclassifyBtn.onclick = () => {
-                                document.getElementById("main").removeChild(resultsDiv);
-                                classifyImage();
-                            };
-                            resultsDiv.appendChild(reclassifyBtn);
-
                         } catch (error) {
-                            console.error('Error during prediction:', error);
-                            resultsDiv.innerHTML += `<p style="color:red;">Error: ${error.message}</p>`;
+                            console.error("Error classifying image:", error);
                         }
                     };
                 }
@@ -234,6 +251,5 @@
             input.click();
         }
     </script>
-
 </body>
 </html>
