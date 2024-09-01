@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Pest Detection</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 10px;
+            box-sizing: border-box;
+            background-color: #f0f0f0;
+        }
+        .container {
+            max-width: 100%;
+            margin: 0 auto;
+        }
+        h1 {
+            text-align: center;
+            font-size: 24px;
+        }
+        .button-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        button {
+            width: 80%;
+            padding: 15px;
+            margin: 5px 0;
+            font-size: 18px;
+            cursor: pointer;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+        }
+        #video, #capturedImage {
+            width: 100%;
+            max-width: 100%;
+            height: auto;
+            display: block;
+            margin: 0 auto;
+        }
+        #result {
+            margin-top: 15px;
+            text-align: center;
+            font-size: 16px;
+            background-color: white;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        @media (min-width: 600px) {
+            .container {
+                max-width: 600px;
+            }
+            .button-container {
+                flex-direction: row;
+                justify-content: center;
+            }
+            button {
+                width: auto;
+                margin: 0 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Pest Detection</h1>
+        <div class="button-container">
+            <button id="startCamera">Start Camera</button>
+            <button id="capture">Capture Image</button>
+        </div>
+        <video id="video" autoplay playsinline></video>
+        <canvas id="canvas" style="display:none;"></canvas>
+        <img id="capturedImage" style="display:none;">
+        <div id="result"></div>
+    </div>
+
+    <script>
+        // Initialize Firebase (replace with your own config)
+        const firebaseConfig = {
+	    apiKey: "AIzaSyD4kYnLgUzzIZt1XUWL9DEQ5j-YhbE1C_0",
+            authDomain: "farm-monitoring-7d029.firebaseapp.com",
+            databaseURL: "https://farm-monitoring-7d029-default-rtdb.firebaseio.com",
+            projectId: "farm-monitoring-7d029",
+            storageBucket: "farm-monitoring-7d029.appspot.com",
+            messagingSenderId: "205970011096",
+            appId: "1:205970011096:web:5a0718eb27438d499af8ad"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+
+        let model;
+        let video = document.getElementById('video');
+        let canvas = document.getElementById('canvas');
+        let capturedImage = document.getElementById('capturedImage');
+        let resultDiv = document.getElementById('result');
+
+        // Load the model
+        async function loadModel() {
+            model = await tf.loadLayersModel('https://teachablemachine.withgoogle.com/models/YfzGFfzHw/model.json');
+        }
+        loadModel();
+
+        // Start the camera
+        document.getElementById('startCamera').addEventListener('click', async () => {
+            const constraints = {
+                video: {
+                    facingMode: { exact: "environment" } // Force use of back camera
+                }
+            };
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia(constraints);
+                video.srcObject = stream;
+                video.style.display = 'block';
+                capturedImage.style.display = 'none';
+            } catch (err) {
+                console.error("Error accessing the camera:", err);
+                alert("Failed to access the back camera. Please make sure you've granted camera permissions and are using a device with a back camera.");
+            }
+        });
+
+        // Capture image
+        document.getElementById('capture').addEventListener('click', () => {
+            if (video.srcObject) {
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+                capturedImage.src = canvas.toDataURL('image/jpeg');
+                video.style.display = 'none';
+                capturedImage.style.display = 'block';
+                classifyImage();
+            } else {
+                alert("Please start the camera first.");
+            }
+        });
+
+        // Classify the captured image
+        async function classifyImage() {
+            const image = tf.browser.fromPixels(capturedImage).resizeNearestNeighbor([224, 224]).toFloat().expandDims();
+            const prediction = await model.predict(image).data();
+            const topPrediction = Array.from(prediction)
+                .map((p, i) => ({ probability: p, className: getClassName(i) }))
+                .sort((a, b) => b.probability - a.probability)[0];
+
+            resultDiv.innerHTML = `<p>Detected: ${topPrediction.className} (${(topPrediction.probability * 100).toFixed(2)}%)</p>`;
+
+            // Get recommendation from Firebase
+            getRecommendation(topPrediction.className);
+        }
+
+        // Get class name (replace with your own class names)
+        function getClassName(index) {
+            const classNames = ['Pest1', 'Pest2', 'Pest3']; // Add your class names here
+            return classNames[index];
+        }
+
+        // Get recommendation from Firebase
+        function getRecommendation(pestName) {
+            const recommendationsRef = database.ref('recommendations/' + pestName);
+            recommendationsRef.once('value').then((snapshot) => {
+                const recommendation = snapshot.val();
+                if (recommendation) {
+                    resultDiv.innerHTML += `<p>Recommendation: ${recommendation}</p>`;
+                }
+            });
+        }
+    </script>
+</body>
+</html>
