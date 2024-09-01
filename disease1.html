@@ -238,7 +238,7 @@
                     resultDiv.innerHTML = `<strong>Detected:</strong> ${topPrediction.className} (${(topPrediction.probability * 100).toFixed(2)}%)`;
                     getRecommendation(topPrediction.className);
                 } else {
-                    resultDiv.innerHTML = "<strong>Result:</strong> Cannot detect the pest with sufficient confidence.";
+                    resultDiv.innerHTML = "<strong>Result:</strong> Hindi maklasipika ang larawan.";
                 }
             } catch (error) {
                 console.error('Error during classification:', error);
@@ -285,7 +285,7 @@
                             resultDiv.innerHTML += `<br><strong>Recommendation:</strong> ${recommendation}`;
                         }
                     } else {
-                        resultDiv.innerHTML += `<br><strong>Recommendation:</strong> No recommendation available for ${pestName}.`;
+                        resultDiv.innerHTML += `<br><strong>Recommendation:</strong> Wala pa sa database ang  ${pestName}.`;
                     }
                 })
                 .catch(error => {
