@@ -6,110 +6,7 @@
     <title>Skynap</title>
     <meta name="mobile-web-app-capable" content="yes">
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 0;
-            background: url('src/SKYSNAP_back.jpg') no-repeat center center fixed;
-            background-size: cover;
-            overflow-x: hidden;
-        }
-        .header {
-            text-align: center;
-            padding: 10px;
-            background-color: rgba(255, 255, 255, 0.8);
-            position: relative;
-        }
-        .header img {
-            max-width: 80px;
-        }
-        .header h1 {
-            margin: 5px 0 0;
-            font-size: 1.5em;
-            color: #333;
-        }
-        .menu-icon {
-            position: absolute;
-            left: 15px;
-            top: 15px;
-            cursor: pointer;
-            width: 30px;
-        }
-        .sidebar {
-            height: 100%;
-            width: 0;
-            position: fixed;
-            z-index: 3;
-            top: 0;
-            left: 0;
-            background: linear-gradient(135deg, #4CAF50, #9CCC65);
-            overflow-x: hidden;
-            transition: 0.5s;
-            padding-top: 60px;
-        }
-        .sidebar a {
-            padding: 10px 15px;
-            text-decoration: none;
-            font-size: 1em;
-            color: #ffffff;
-            display: block;
-            transition: 0.3s;
-        }
-        .sidebar a:hover {
-            color: #f1f1f1;
-        }
-        .sidebar .closebtn {
-            position: absolute;
-            top: 0;
-            right: 15px;
-            font-size: 36px;
-            margin-left: 50px;
-        }
-        #main {
-            transition: margin-left .5s;
-            padding: 16px;
-        }
-        .main-buttons {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 15px;
-            margin-top: 20px;
-        }
-        .main-buttons button {
-            width: 80%;
-            padding: 10px;
-            font-size: 1.1em;
-            cursor: pointer;
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            transition: background-color 0.3s ease;
-        }
-        .main-buttons button:hover {
-            background-color: #45a049;
-        }
-        .prediction-results {
-            margin-top: 20px;
-            padding: 15px;
-            background-color: rgba(255, 255, 255, 0.8);
-            border-radius: 10px;
-            max-width: 90%;
-            margin-left: auto;
-            margin-right: auto;
-        }
-        .prediction-results img {
-            max-width: 100%;
-            border-radius: 10px;
-        }
-        .prediction-results h2 {
-            margin-top: 0;
-        }
-        .prediction-results p {
-            font-size: 1em;
-            color: #333;
-        }
+        /* Your existing styles */
     </style>
     <!-- Load TensorFlow.js -->
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@3.20.0/dist/tf.min.js"></script>
@@ -160,8 +57,14 @@
             const ripeningMetadataURL = "https://teachablemachine.withgoogle.com/models/7V236RqnY/metadata.json";
             const statusModelURL = "https://teachablemachine.withgoogle.com/models/rYYZnO5oA/model.json";
             const statusMetadataURL = "https://teachablemachine.withgoogle.com/models/rYYZnO5oA/metadata.json";
-            ripeningModel = await tmImage.load(ripeningModelURL, ripeningMetadataURL);
-            statusModel = await tmImage.load(statusModelURL, statusMetadataURL);
+
+            try {
+                ripeningModel = await tmImage.load(ripeningModelURL, ripeningMetadataURL);
+                statusModel = await tmImage.load(statusModelURL, statusMetadataURL);
+                console.log("Models loaded successfully");
+            } catch (error) {
+                console.error("Error loading models:", error);
+            }
         };
 
         function openNav() {
@@ -192,6 +95,12 @@
         }
 
         async function classifyImage() {
+            // Ensure models are loaded before running classification
+            if (!ripeningModel || !statusModel) {
+                alert("Models are still loading. Please try again in a moment.");
+                return;
+            }
+
             const input = document.createElement('input');
             input.type = 'file';
             input.accept = 'image/*';
