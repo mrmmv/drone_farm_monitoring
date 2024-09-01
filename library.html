@@ -6,11 +6,11 @@
     <title>Aklatan Ng Peste At Mga Sakit</title>
     <style>
         body {
-            background-image: url('src/Agri.jpg'); /* Ensure the image is in the src folder */
-            background-size: cover; /* Cover the entire screen */
-            background-position: center; /* Center the image */
-            background-repeat: no-repeat; /* Prevent the image from repeating */
-            background-attachment: fixed; /* Keep the background fixed while scrolling */
+            background-image: url('src/Agri.jpg');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
             font-family: Arial, sans-serif;
             margin: 0;
             padding: 0;
@@ -37,8 +37,9 @@
         }
 
         .item img {
-            width: 150px; /* Set a fixed width */
-            height: 150px; /* Set a fixed height */
+            width: 100%;
+            max-width: 150px; /* Set a max width */
+            height: auto; /* Maintain aspect ratio */
             object-fit: cover;
             border: 2px solid #fff;
             border-radius: 10px;
@@ -59,7 +60,7 @@
         /* Mobile view adjustments */
         @media (max-width: 600px) {
             h1 {
-                font-size: 1.5rem; /* Smaller font size for mobile */
+                font-size: 1.5rem;
             }
 
             .container {
@@ -68,8 +69,8 @@
             }
 
             .item img {
-                width: 100%; /* Let images take full width of the grid column */
-                height: auto;
+                max-width: 100px; /* Adjust the max width for smaller screens */
+                height: auto; /* Maintain aspect ratio */
             }
         }
     </style>
