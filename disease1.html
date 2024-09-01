@@ -86,7 +86,7 @@
     <script>
         // Initialize Firebase (replace with your own config)
         const firebaseConfig = {
-	    apiKey: "AIzaSyD4kYnLgUzzIZt1XUWL9DEQ5j-YhbE1C_0",
+            apiKey: "AIzaSyD4kYnLgUzzIZt1XUWL9DEQ5j-YhbE1C_0",
             authDomain: "farm-monitoring-7d029.firebaseapp.com",
             databaseURL: "https://farm-monitoring-7d029-default-rtdb.firebaseio.com",
             projectId: "farm-monitoring-7d029",
@@ -106,6 +106,7 @@
         // Load the model
         async function loadModel() {
             model = await tf.loadLayersModel('https://teachablemachine.withgoogle.com/models/YfzGFfzHw/model.json');
+            console.log("Model loaded successfully.");
         }
         loadModel();
 
@@ -144,7 +145,14 @@
 
         // Classify the captured image
         async function classifyImage() {
-            const image = tf.browser.fromPixels(capturedImage).resizeNearestNeighbor([224, 224]).toFloat().expandDims();
+            // Convert image to tensor
+            const image = tf.browser.fromPixels(capturedImage)
+                .resizeNearestNeighbor([224, 224])
+                .toFloat()
+                .div(tf.scalar(255.0)) // Normalize image
+                .expandDims();
+
+            // Make prediction
             const prediction = await model.predict(image).data();
             const topPrediction = Array.from(prediction)
                 .map((p, i) => ({ probability: p, className: getClassName(i) }))
@@ -158,7 +166,7 @@
 
         // Get class name (replace with your own class names)
         function getClassName(index) {
-            const classNames = ['Pest1', 'Pest2', 'Pest3']; // Add your class names here
+            const classNames = ['Blue Beetle', 'False Smut', 'Golden Apple Snail', 'Golden Apple Snail Egg', 'Green Leafhopper']; // Add your class names here
             return classNames[index];
         }
 
@@ -169,7 +177,12 @@
                 const recommendation = snapshot.val();
                 if (recommendation) {
                     resultDiv.innerHTML += `<p>Recommendation: ${recommendation}</p>`;
+                } else {
+                    resultDiv.innerHTML += `<p>No recommendation found for ${pestName}.</p>`;
                 }
+            }).catch((error) => {
+                console.error("Error fetching recommendation from Firebase:", error);
+                resultDiv.innerHTML += `<p>Error fetching recommendation.</p>`;
             });
         }
     </script>
